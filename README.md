@@ -87,7 +87,7 @@ AWS SAM / CloudFormation을 활용하여 Lambda 배포 및 실제 실행까지 �
 
 ### 🔗 Project Repository
 
-[👉 Shoe Data Pipeline 프로젝트 자세히 보기][(https://github.com/pcw940530/01-data-collection-pipeline)](https://github.com/pcw940530/soldout-data-pipeline)
+[👉 Shoe Data Pipeline 프로젝트 자세히 보기]https://github.com/pcw940530/soldout-data-pipeline
 
 ---
 
