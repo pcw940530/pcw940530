@@ -1,16 +1,17 @@
 <div align="center">
 
-# 박철우 | Data Engineering & Analysis
+# 안녕하세요, 박철우입니다.
 
-### 데이터를 수집하고, 정리하고, 연결하며  
-### 그 안에서 의미를 찾는 과정을 공부하고 있습니다.
+### 데이터를 통해 새로운 관점을 발견하는 과정에 관심이 있습니다.
+
+Python과 SQL을 중심으로 데이터를 다루는 방법을 배우고 있으며,  
+수집하고 정리하는 것에서 나아가 **데이터가 무엇을 말하고 있는지 이해하는 것**을 공부하고 있습니다.
+
+</div>
 
 <br>
 
-비전공자로 시작해 **Python · SQL · Data Pipeline · AWS**를 중심으로  
-데이터의 수집부터 전처리, 검증, 저장, 활용까지 직접 경험하고 있습니다.
-
-<br>
+---
 
 <img src="https://img.shields.io/badge/Data%20Engineering-3776AB?style=for-the-badge">
 <img src="https://img.shields.io/badge/Data%20Analysis-150458?style=for-the-badge">
