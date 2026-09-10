@@ -121,11 +121,11 @@ Python과 SQL을 중심으로 데이터 수집·전처리·분석을 공부하�
 
 <table>
 <tr>
-<td><strong>프로젝트 형태</strong></td>
+<td><strong>Project</strong></td>
 <td>개인 프로젝트 · 1인 개발</td>
 </tr>
 <tr>
-<td><strong>주요 역할</strong></td>
+<td><strong>Role</strong></td>
 <td>데이터 수집 · 전처리 · 품질 검증 · DB 적재 · CI · AWS 배포</td>
 </tr>
 <tr>
@@ -136,20 +136,46 @@ Python과 SQL을 중심으로 데이터 수집·전처리·분석을 공부하�
 
 ### Overview
 
-신발 편집샵의 상품 데이터를 활용하여  
-**데이터 수집부터 저장까지 이어지는 전체 파이프라인을 직접 설계하고 구현한 개인 프로젝트**입니다.
+신발 상품 데이터를 활용하여  
+**데이터 수집부터 저장까지 이어지는 전체 파이프라인을 직접 구현한 개인 프로젝트**입니다.
 
-Selenium을 이용하여 동적으로 상품 데이터를 수집하고,  
-수집한 Raw Data를 Pandas로 전처리한 뒤 데이터 품질 검증 과정을 거쳐 MySQL에 적재했습니다.
+Selenium을 이용해 동적으로 상품 데이터를 수집하고,  
+수집한 Raw Data를 Pandas로 전처리한 뒤 품질 검증 과정을 거쳐 MySQL에 적재했습니다.
 
-단순히 크롤링 결과를 파일로 저장하는 것에서 끝내지 않고,
+단순히 크롤링한 결과를 파일로 저장하는 것에서 끝내지 않고,
 
 **수집 → 원본 보존 → 전처리 → 품질 검증 → DB 적재**
 
 과정을 하나의 실행 흐름으로 연결하는 것을 목표로 진행했습니다.
 
-프로젝트 후반에는 GitHub Actions를 이용하여 CI 환경을 구성하고,  
+프로젝트 후반에는 GitHub Actions를 이용한 CI 환경을 구성하고,  
 AWS SAM / CloudFormation을 활용하여 Lambda 배포와 실제 실행까지 검증했습니다.
+
+### Why I Built This
+
+처음에는 웹에서 상품 데이터를 가져오는 **동적 크롤링**에서 시작했습니다.
+
+하지만 프로젝트를 진행하면서 데이터를 가져오는 것만으로는  
+실제로 활용 가능한 데이터가 만들어지는 것이 아니라는 점에 관심을 가지게 되었습니다.
+
+수집된 데이터가 어떤 형태로 보존되고,  
+어떻게 정리되고 검증된 뒤 데이터베이스에 저장되는지 직접 경험하기 위해  
+크롤링 이후의 전처리, 품질 검증, DB 적재까지 하나의 파이프라인으로 확장했습니다.
+
+### Dataset
+
+프로젝트에서는 신발 상품 정보를 중심으로 데이터를 수집하고 가공했습니다.
+
+| Data | Description |
+|---|---|
+| **Brand** | 상품 브랜드 정보 |
+| **Product** | 상품명 및 상품 정보 |
+| **Price** | 상품 가격 데이터 |
+| **Product URL** | 상품을 식별하기 위한 상세 페이지 URL |
+| **Collected Data** | 크롤링을 통해 수집된 상품 데이터 |
+
+수집된 데이터는 바로 DB에 적재하지 않고  
+**Raw Data → Transform → Quality Gate** 단계를 거쳐 최종 데이터로 관리했습니다.
 
 ### Data Pipeline
 
@@ -189,25 +215,83 @@ AWS SAM / CloudFormation을 활용하여 Lambda 배포와 실제 실행까지 �
 | 영역 | 구현 내용 |
 |---|---|
 | **Data Collection** | Selenium 기반 동적 웹 크롤링 및 브랜드별 상품 데이터 수집 |
-| **Raw Data** | 수집 데이터의 원본 보존 및 Raw / Staging 데이터 분리 |
+| **Raw Data** | 수집 데이터 원본 보존 및 Raw / Staging 데이터 분리 |
 | **Processing** | Pandas 기반 가격 및 상품 데이터 전처리 |
-| **Quality** | 적재 전 데이터 품질 검증을 위한 Quality Gate 구성 |
+| **Quality** | 적재 전 데이터 상태를 확인하기 위한 Quality Gate 구성 |
 | **Database** | MySQL 데이터 적재 및 URL 기준 중복 데이터 Upsert |
 | **Pipeline** | `main.py`를 중심으로 수집 → 처리 → 검증 → 적재 과정 통합 |
-| **CI** | GitHub Actions를 활용한 CI 환경 구성 |
+| **CI** | GitHub Actions 기반 CI 환경 구성 |
 | **Cloud** | AWS SAM / CloudFormation 기반 Lambda 배포 및 실행 검증 |
+
+### Problem & Solution
+
+#### 01. 반복 수집 시 발생할 수 있는 중복 데이터
+
+**Problem**
+
+크롤링 파이프라인을 반복 실행하면  
+이미 수집된 상품이 MySQL에 다시 INSERT되어 동일 상품이 중복 저장될 수 있었습니다.
+
+**Solution**
+
+상품마다 존재하는 **상품 URL을 식별 기준**으로 활용했습니다.
+
+이미 존재하는 URL의 상품은 새로운 행으로 계속 추가하는 대신  
+기존 데이터를 갱신할 수 있도록 **URL 기준 Upsert 방식**을 적용했습니다.
+
+이를 통해 파이프라인을 반복 실행하더라도  
+동일 상품이 계속 중복 적재되는 문제를 관리할 수 있도록 구성했습니다.
+
+<br>
+
+#### 02. 수집 데이터의 품질 문제
+
+**Problem**
+
+웹 크롤링 데이터는 페이지 상태나 상품 정보에 따라  
+가격 누락, 예상하지 못한 값 등 정상적이지 않은 데이터가 포함될 가능성이 있었습니다.
+
+수집 데이터를 바로 DB에 저장할 경우  
+이러한 데이터까지 그대로 최종 데이터에 포함될 수 있었습니다.
+
+**Solution**
+
+수집 직후 DB에 적재하지 않고
+
+`Raw → Transform → Quality Gate → DB`
+
+단계를 거치도록 구성했습니다.
+
+Pandas를 이용하여 데이터를 정리하고,  
+적재 전에 데이터 상태를 확인하는 **Quality Gate 단계**를 두어  
+검증 이후의 데이터를 MySQL에 적재하도록 구성했습니다.
+
+### Result
+
+프로젝트를 통해 크롤링부터 클라우드 실행까지 이어지는 데이터 처리 흐름을 구현했습니다.
+
+- Selenium 기반 동적 상품 데이터 수집
+- Raw / Staging 데이터 분리
+- Pandas 기반 데이터 전처리
+- Quality Gate를 통한 데이터 검증 과정 구성
+- MySQL 데이터 적재
+- URL 기준 Upsert를 통한 중복 데이터 관리
+- `main.py` 기반 전체 파이프라인 통합
+- GitHub Actions 기반 CI 환경 구성
+- AWS SAM / CloudFormation 기반 Lambda 배포
+- AWS 환경에서 Lambda 실행 검증
 
 ### What I Learned
 
-이 프로젝트를 통해 단순히 데이터를 가져오는 크롤링 작업과  
+이 프로젝트를 진행하면서 단순히 데이터를 가져오는 크롤링 작업과  
 **데이터를 지속적으로 사용할 수 있도록 관리하는 파이프라인의 차이**를 경험했습니다.
 
-특히 수집된 데이터를 바로 사용하는 것이 아니라  
+특히 수집한 데이터를 바로 사용하는 것이 아니라  
 Raw 데이터를 보존하고, 전처리와 품질 검증 단계를 거친 뒤 DB에 적재하면서  
-데이터의 **정확성, 재사용성, 중복 관리**를 함께 고려하는 경험을 할 수 있었습니다.
+데이터의 **정확성, 재사용성, 중복 관리**를 함께 고려하게 되었습니다.
 
 또한 로컬 환경에서 동작하는 코드를 GitHub Actions와 AWS 환경으로 확장하면서  
-코드 작성 이후의 **배포와 실행 환경**까지 경험했습니다.
+코드 작성 이후의 **CI와 배포 및 실행 환경**까지 경험할 수 있었습니다.
 
 ### Tech Stack
 
@@ -238,12 +322,12 @@ Raw 데이터를 보존하고, 전처리와 품질 검증 단계를 거친 뒤 D
 
 <table>
 <tr>
-<td><strong>프로젝트 형태</strong></td>
+<td><strong>Project</strong></td>
 <td>개인 프로젝트 · 1인 개발</td>
 </tr>
 <tr>
-<td><strong>주요 역할</strong></td>
-<td>기획 · UI 구현 · Backend 구조 구성 · DB 연동</td>
+<td><strong>Role</strong></td>
+<td>기획 · UI 구현 · Backend 구조 구성 · DB 연동 환경 구성</td>
 </tr>
 <tr>
 <td><strong>Tech</strong></td>
@@ -264,7 +348,18 @@ Spring Boot의 Controller와 DTO 구조를 적용하고 MySQL 연결 환경을 �
 
 **Frontend → Backend → Database**
 
-로 이어지는 웹 애플리케이션의 기본적인 구조를 학습했습니다.
+로 이어지는 웹 애플리케이션의 기본 구조를 경험했습니다.
+
+### Why I Built This
+
+평소 관심이 있던 **신발과 패션이라는 주제를 웹 개발과 연결해보고 싶어 시작한 개인 프로젝트**입니다.
+
+단순히 하나의 정적인 웹 페이지를 만드는 것이 아니라  
+사용자가 메인 페이지에서 브랜드를 선택하고 상품을 확인한 뒤  
+상세 페이지와 장바구니로 이동하는 **서비스의 흐름을 직접 만들어보는 것**을 목표로 했습니다.
+
+또한 Frontend 화면 구현뿐만 아니라  
+Spring Boot와 MySQL까지 연결하면서 웹 서비스가 구성되는 전체 구조를 경험하고자 했습니다.
 
 ### Service Structure
 
@@ -331,17 +426,74 @@ spring-sence
 └── MySQL
 ```
 
+### Problem & Solution
+
+#### 01. 여러 페이지를 하나의 서비스 흐름으로 연결하기
+
+**Problem**
+
+메인, 브랜드, 상품 상세, 장바구니 등 각각의 화면을 만드는 것만으로는  
+하나의 웹 서비스처럼 느껴지기 어려웠습니다.
+
+각 화면이 독립적으로 존재하는 것이 아니라  
+사용자가 자연스럽게 다음 화면으로 이동할 수 있는 구조가 필요했습니다.
+
+**Solution**
+
+사용자의 탐색 과정을 기준으로
+
+`Main → Brand → Product Detail → Cart`
+
+흐름을 구성하고 각 페이지를 연결했습니다.
+
+회원 관련 화면도 `Sign Up · Login · My Page`로 별도로 구성하면서  
+페이지 단위의 제작에서 벗어나 **사용자 흐름을 기준으로 화면을 설계하는 경험**을 할 수 있었습니다.
+
+<br>
+
+#### 02. Frontend에서 Backend 구조로 확장하기
+
+**Problem**
+
+HTML / CSS / JavaScript만으로 화면을 구성하면  
+웹 페이지의 UI는 만들 수 있지만 Backend와 데이터베이스가 연결되는  
+웹 애플리케이션의 전체 구조를 경험하기 어려웠습니다.
+
+**Solution**
+
+Spring Boot 프로젝트로 구성하고  
+회원과 상품 영역을 기준으로 `MemberController`, `ProductController`와  
+`Member`, `ProductDto` 구조를 적용했습니다.
+
+또한 MySQL 연결 환경을 구성하면서  
+Frontend뿐만 아니라 **Backend와 Database가 함께 구성되는 웹 애플리케이션 구조**를 경험했습니다.
+
+### Result
+
+프로젝트를 통해 여러 화면을 하나의 사용자 흐름으로 연결하고  
+Spring Boot 기반 웹 애플리케이션 구조를 구성했습니다.
+
+- Main 페이지 구성
+- 브랜드별 상품 페이지 구성
+- 상품 상세 페이지 구성
+- 장바구니 화면 구성
+- 회원가입 / 로그인 / 마이페이지 화면 구성
+- HTML / CSS / JavaScript 기반 Frontend 구현
+- Spring Boot Controller / DTO 구조 적용
+- MySQL 연결 환경 구성
+- 각 페이지를 연결한 사용자 탐색 흐름 구성
+
 ### What I Learned
 
 SENCE:신 프로젝트를 통해 하나의 화면만 구현하는 것이 아니라  
 여러 페이지가 연결된 **웹 서비스의 전체 사용자 흐름**을 직접 구성해볼 수 있었습니다.
 
 또한 Frontend와 Backend를 각각 별개의 기술로 보는 것이 아니라  
-사용자의 요청이 Controller를 거쳐 처리되고 데이터와 연결되는 구조를 경험하면서  
-웹 애플리케이션이 동작하는 기본적인 흐름을 이해할 수 있었습니다.
+사용자 화면과 Controller, 데이터 구조가 어떻게 연결될 수 있는지 경험하면서  
+웹 애플리케이션의 기본적인 구조를 이해할 수 있었습니다.
 
-이 경험은 이후 데이터 프로젝트를 진행하면서도  
-**데이터가 실제 애플리케이션과 서비스에서 어떻게 사용될 수 있는지** 이해하는 기반이 되었습니다.
+이 경험은 이후 데이터 프로젝트를 진행할 때도  
+**데이터가 실제 애플리케이션과 서비스에서 어떻게 활용될 수 있는지** 생각해보는 기반이 되었습니다.
 
 ### Tech Stack
 
@@ -359,7 +511,10 @@ SENCE:신 프로젝트를 통해 하나의 화면만 구현하는 것이 아니�
 <img src="https://img.shields.io/badge/Repository-SENCE%3A신-181717?style=for-the-badge&logo=github&logoColor=white">
 </a>
 
-<br>
+<br><br>
+
+---
+
 ## Currently Learning
 
 <table>
